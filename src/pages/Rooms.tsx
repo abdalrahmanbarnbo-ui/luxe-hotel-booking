@@ -13,14 +13,43 @@ interface Room {
   amenities: string[];
 }
 
+// بيانات ثابتة جاهزة للعرض الفوري بدون الحاجة لخادم
+const mockRooms: Room[] = [
+  {
+    id: 1,
+    name: "Deluxe Ocean View",
+    description: "Experience breathtaking ocean views from your private balcony. This spacious room features a king-size bed, luxurious linens, and a marble bathroom.",
+    price_per_night: 350,
+    capacity: 2,
+    image_url: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop",
+    amenities: ["Ocean View", "King Bed", "Balcony", "Free WiFi", "Room Service"]
+  },
+  {
+    id: 2,
+    name: "Executive Suite",
+    description: "A perfect blend of luxury and comfort. The Executive Suite offers a separate living area, premium amenities, and exclusive access to the executive lounge.",
+    price_per_night: 550,
+    capacity: 3,
+    image_url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=2070&auto=format&fit=crop",
+    amenities: ["City View", "Lounge Access", "Mini Bar", "Espresso Machine"]
+  },
+  {
+    id: 3,
+    name: "Presidential Penthouse",
+    description: "The pinnacle of luxury. Our penthouse suite features panoramic views, a private terrace with a plunge pool, and a dedicated butler service.",
+    price_per_night: 1200,
+    capacity: 4,
+    image_url: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=2070&auto=format&fit=crop",
+    amenities: ["Private Pool", "Butler Service", "Terrace", "Kitchen", "Spa Bath"]
+  }
+];
+
 export default function Rooms() {
   const [rooms, setRooms] = useState<Room[]>([]);
 
   useEffect(() => {
-    fetch('/api/rooms')
-      .then(res => res.json())
-      .then(data => setRooms(data))
-      .catch(console.error);
+    // بدلاً من الاتصال بالخادم، نقوم بتحميل البيانات الثابتة مباشرة
+    setRooms(mockRooms);
   }, []);
 
   return (
