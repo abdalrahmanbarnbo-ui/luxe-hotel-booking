@@ -4,10 +4,10 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
-import { CreditCard, Lock } from 'lucide-react';
+import { CreditCard, Lock, CheckCircle2 } from 'lucide-react';
 import SEO from '../components/SEO';
 
-const stripePromise = loadStripe((import.meta as any).env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
+const stripePromise = loadStripe((import.meta as any).env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51NoDummyKey1234567890abcdefghijklmnopqrstuvwxyz');
 
 interface CheckoutState {
   roomId: string;
@@ -17,12 +17,12 @@ interface CheckoutState {
   room: any;
 }
 
-const CheckoutForm = ({ state, clientSecret, totalPrice }: { state: CheckoutState, clientSecret: string, totalPrice: number }) => {
+const CheckoutForm = ({ totalPrice }: { totalPrice: number }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,35 +33,35 @@ const CheckoutForm = ({ state, clientSecret, totalPrice }: { state: CheckoutStat
 
     setProcessing(true);
 
-    const cardElement = elements.getElement(CardElement);
-
-    if (cardElement) {
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement as any,
-          billing_details: {
-            name: state.room.name,
-          },
-        },
-      });
-
-      if (error) {
-        setError(error.message || 'An error occurred.');
-        setProcessing(false);
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Confirm booking on backend
-        await fetch('/api/bookings/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentIntentId: paymentIntent.id })
-        });
-        
-        // Redirect to success page or show success message
-        alert('Booking successful!');
+    // محاكاة عملية الدفع لغرض العرض التجريبي
+    setTimeout(() => {
+      setProcessing(false);
+      setSuccess(true);
+      
+      // العودة للصفحة الرئيسية بعد 3 ثواني من النجاح
+      setTimeout(() => {
         navigate('/');
-      }
-    }
+      }, 3000);
+    }, 2000);
   };
+
+  // شاشة النجاح الوهمية
+  if (success) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12"
+      >
+        <div className="flex justify-center mb-6">
+          <CheckCircle2 className="w-20 h-20 text-emerald-500" />
+        </div>
+        <h3 className="text-3xl font-serif text-stone-900 mb-4">Booking Confirmed!</h3>
+        <p className="text-stone-600 mb-8 text-lg">Your transaction was successful. We look forward to hosting you.</p>
+        <p className="text-sm text-stone-400">Redirecting to homepage...</p>
+      </motion.div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -86,7 +86,6 @@ const CheckoutForm = ({ state, clientSecret, totalPrice }: { state: CheckoutStat
             },
           }} />
         </div>
-        {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
       </div>
 
       <button
@@ -94,7 +93,7 @@ const CheckoutForm = ({ state, clientSecret, totalPrice }: { state: CheckoutStat
         disabled={!stripe || processing}
         className="w-full bg-stone-900 text-white font-medium py-4 rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50 flex justify-center items-center"
       >
-        {processing ? 'Processing...' : `Pay $${totalPrice}`}
+        {processing ? 'Processing Payment...' : `Pay $${totalPrice}`}
         <Lock className="w-4 h-4 ml-2" />
       </button>
     </form>
@@ -106,7 +105,6 @@ export default function Checkout() {
   const navigate = useNavigate();
   const state = location.state as CheckoutState;
   
-  const [clientSecret, setClientSecret] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -115,35 +113,19 @@ export default function Checkout() {
   useEffect(() => {
     if (!state) {
       navigate('/rooms');
+    } else {
+      // حساب السعر محلياً بدلاً من الخادم
+      const start = new Date(state.checkIn);
+      const end = new Date(state.checkOut);
+      const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      setTotalPrice(state.room.price_per_night * nights);
     }
   }, [state, navigate]);
 
   const handleCreateIntent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-      const res = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId: state.roomId,
-          checkIn: state.checkIn,
-          checkOut: state.checkOut,
-          userName,
-          userEmail
-        })
-      });
-      
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      setClientSecret(data.clientSecret);
-      setTotalPrice(data.totalPrice);
-      setStep(2);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to initialize payment.');
-    }
+    // الانتقال لخطوة الدفع مباشرة بدون انتظار الخادم
+    setStep(2);
   };
 
   if (!state) return null;
@@ -257,11 +239,9 @@ export default function Checkout() {
             ) : (
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-100">
                 <h2 className="text-2xl font-serif text-stone-900 mb-6">Payment</h2>
-                {clientSecret && (
-                  <Elements stripe={stripePromise} options={{ clientSecret }}>
-                    <CheckoutForm state={state} clientSecret={clientSecret} totalPrice={totalPrice} />
-                  </Elements>
-                )}
+                <Elements stripe={stripePromise}>
+                  <CheckoutForm totalPrice={totalPrice} />
+                </Elements>
               </div>
             )}
           </div>
